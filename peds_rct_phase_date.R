@@ -4,7 +4,7 @@
 
 library(tidyverse)
 library(dplyr) 
-library(ggplot2)  
+library(ggplot2) 
 library(kableExtra)
 library(ggthemes)
 library(viridis) 
@@ -14,7 +14,7 @@ library(ggsci)
 
 ##########  ACQUIRE DATASET  ########## 
 
-### Defined Search Paramaters for General
+### Defined Search Paramaters 
 srch_peds_RCT <- "((Randomized Controlled Trial[ptyp])) AND ((2006/10/21[PDat]:2017/11/13[PDat])) AND ((Child[Mesh] OR Infant[Mesh] OR Adolescent [Mesh]) NOT ((Adult[Mesh])"
 
 srch_peds_p1 <- "((Clinical Trial, Phase I[ptyp])) AND ((2006/10/21[PDat]:2017/11/13[PDat])) AND ((Child[Mesh] OR Infant[Mesh] OR Adolescent[Mesh]) NOT ((Adult[Mesh])"
@@ -29,7 +29,7 @@ srch_peds_p4 <- "((Clinical Trial, Phase IV[ptyp])) AND ((2006/10/21[PDat]:2017/
 scrape_pubmed <- function (x) {
   x %>%
     EUtilsSummary(
-      retmax=40000, 
+      retmax=10000, 
       mindate= 1995,
       maxdate= 2017,
       datetype = "EPDT") %>% 
@@ -63,60 +63,60 @@ gen_df <- function(x) {
     extract_data()
 }
 
-
 ### Extract relevant dataframes 
-df_rpeds1 <- gen_df(srch_peds_p1)
-df_rpeds1$Field<-c("Phase 1")
-df_rpeds2 <- gen_df(srch_peds_p2)
-df_rpeds2$Field<-c("Phase 2")
-df_rpeds3 <- gen_df(srch_peds_p3)
-df_rpeds3$Field<-c("Phase 3")
-df_rpeds4 <- gen_df(srch_peds_p4)
-df_rpeds4$Field<-c("Phase 4")
+df_rRCT <- gen_df(srch_peds_RCT)
+
+df_rp1 <- gen_df(srch_peds_p1)
+df_rp2 <- gen_df(srch_peds_p2)
+df_rp3 <- gen_df(srch_peds_p3)
+df_rp4 <- gen_df(srch_peds_p4)
 
 ##########  CLEAN DATASETS  ########## 
 ### Bind dataframes together 
-#df <- rbind(df_rRCT)
-df_peds<-rbind(df_rpeds1, df_rpeds2, df_rpeds3, df_rpeds4)
 
+df_rRCT$kind <- c("RCT")
+df_rp1$phase <- c("Phase 1")
+df_rp2$phase <- c("Phase 2")
+df_rp3$phase <- c("Phase 3")
+df_rp4$phase <- c("Phase 4")
 
-#write_csv(df, "RCT Peds - RCT Phase.csv")
-write_csv(df_peds, "Pediatric RCT Project - Phase Extension.csv")
+df <- rbind(df_rRCT)
+df_p <-rbind(df_rp1, df_rp2, df_rp3, df_rp4)
+
+write_csv(df, "RCT SRMA Project - RCT Phase.csv")
+write_csv(df_p, "RCT Project - Phase Extension.csv")
 
 # Generate Date-based Time Variable
 
-#df$date <- paste(df$year, df$month, df$day, sep="-")
-#df$date <- ymd(df$date)
+df$date <- paste(df$year, df$month, df$day, sep="-")
+df$date <- ymd(df$date)
 
-df_peds$date <- paste(df_peds$year, df_peds$month, df_peds$day, sep="-")
-df_peds$date <- ymd(df_peds$date)
+df_p$date <- paste(df_p$year, df_p$month, df_p$day, sep="-")
+df_p$date <- ymd(df_p$date)
 
 # Create intervals for time variable 
 
-#df <- df %>% 
-#  mutate(monthly = as.Date(cut(df$date, breaks = "month"))) 
+df <- df %>% 
+  mutate(monthly = as.Date(cut(df$date, breaks = "month"))) 
 
-df_peds <- df_peds %>% 
-  mutate(monthly = as.Date(cut(df_peds$date, breaks = "month"))) 
+df_p <- df_p %>% 
+  mutate(monthly = as.Date(cut(df_p$date, breaks = "month"))) 
 
 ##########  Overall Numbers  ########## 
 
-#df %>%
-#  group_by(kind) %>%
-#  count() 
+df %>%
+  group_by(kind) %>%
+  count() 
 
 # Total RCTS ***
 
-df_peds %>% 
+df_p %>% 
   group_by(phase) %>%
   count()
 
-#Fact Check 
-
-class(df_peds$Field)
 
 ##########  Figure 1: RCTs By Clinical Phase Over Time ########## 
-Figure1<- df_peds %>% 
+df_p %>% 
   mutate(yearly = year(date)) %>%
   group_by(yearly, phase) %>%
   count() %>% 
@@ -125,15 +125,17 @@ Figure1<- df_peds %>%
     x = yearly,
     y = n, 
     col = phase)) +
-  geom_line() +
+  geom_point(size = 2, alpha = 0.5) +
+  geom_smooth() +
   theme_classic(
-    base_size = 16) + theme(axis.text.x = element_text(angle=0, hjust=1))  +
+    base_size = 22) +
   scale_color_jama() +
   labs(
-    title = "\nFigure 1: Phase of Pediatric Clinical Trials in the Published Literatre, 2007-2017", 
-    subset = "Stratified by Phase of Study, n = XXX\n",
+    title = "\nFigure 1: Phase of Pediatric Clinical Trials, 1995-2017", 
+    subset = "Stratified by Phase of Study, n = 62\n",
     y = "\nTrials per Year\n", 
     x = "\nPublication Year\n",
-    col = "Phase of Trial") + scale_x_discrete(limit = c(2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017))+ coord_cartesian(xlim = c(2007, 2017))
+    col = "Phase of Trial")
 
-Figure1
+
+
